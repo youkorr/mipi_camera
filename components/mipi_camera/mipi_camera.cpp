@@ -30,6 +30,8 @@ void MIPICameraComponent::setup() {
     ESP_LOGI(TAG, "  Resolution: %s", this->resolution_.c_str());
     ESP_LOGI(TAG, "  Pixel Format: %s", this->pixel_format_.c_str());
     ESP_LOGI(TAG, "  Framerate: %d fps", this->framerate_);
+    ESP_LOGI(TAG, "  Mirror: %s (capteur)", this->mirror_enabled_ ? "ON" : "OFF");
+    ESP_LOGI(TAG, "  Flip: %s (capteur)", this->flip_enabled_ ? "ON" : "OFF");
     ESP_LOGI(TAG, "  Triple buffering: %d buffers", NUM_BUFFERS);
     ESP_LOGI(TAG, "  Auto Exposure: %s", auto_exposure::ENABLED_BY_DEFAULT ? "ON" : "OFF");
     ESP_LOGI(TAG, "========================================");
@@ -51,7 +53,7 @@ void MIPICameraComponent::setup() {
     return;
   }
 
-  // Initialiser le capteur
+  // Initialiser le capteur (le mirror sera configuré ici)
   if (!this->init_sensor_()) {
     ESP_LOGE(TAG, "❌ Échec init sensor");
     this->mark_failed();
@@ -95,6 +97,8 @@ void MIPICameraComponent::setup() {
     return;
   }
 
+  // ❌ RETIRÉ: Plus besoin de init_ppa_()
+
   // Tâche AE asynchrone
   this->ae_command_queue_ = xQueueCreate(4, sizeof(AECommand));
   if (!this->ae_command_queue_) {
@@ -113,7 +117,6 @@ void MIPICameraComponent::setup() {
     0   // Core 0
   );
 
-  // ✅ CRITIQUE: Marquer comme initialisé AVANT de démarrer le streaming
   this->initialized_ = true;
   
   if (debug::VERBOSE_INIT) {
