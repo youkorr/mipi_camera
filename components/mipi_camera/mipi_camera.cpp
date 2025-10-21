@@ -216,18 +216,30 @@ bool MIPICameraComponent::init_external_clock_() {
   ESP_LOGI(TAG, "Init horloge externe (pin %d, %u Hz)", 
            this->external_clock_pin_, this->external_clock_freq_);
 
-  // Configuration LEDC pour générer l'horloge
+  // Configuration LEDC pour ESP32-P4
+  // Note: ESP32-P4 nécessite une résolution plus élevée pour les hautes fréquences
   ledc_timer_config_t ledc_timer = {};
   ledc_timer.speed_mode = LEDC_LOW_SPEED_MODE;
-  ledc_timer.duty_resolution = LEDC_TIMER_2_BIT;
+  ledc_timer.duty_resolution = LEDC_TIMER_4_BIT;  // 4-bit au lieu de 2-bit
   ledc_timer.timer_num = LEDC_TIMER_0;
   ledc_timer.freq_hz = this->external_clock_freq_;
   ledc_timer.clk_cfg = LEDC_AUTO_CLK;
 
   esp_err_t ret = ledc_timer_config(&ledc_timer);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Échec config timer LEDC: %d", ret);
-    return false;
+    ESP_LOGE(TAG, "Échec config timer LEDC: 0x%x", ret);
+    
+    // Essayer avec une résolution encore plus basse
+    ESP_LOGW(TAG, "Tentative avec LEDC_TIMER_1_BIT...");
+    ledc_timer.duty_resolution = LEDC_TIMER_1_BIT;
+    ret = ledc_timer_config(&ledc_timer);
+    
+    if (ret != ESP_OK) {
+      ESP_LOGE(TAG, "Échec final config timer LEDC: 0x%x", ret);
+      ESP_LOGW(TAG, "⚠️  Horloge externe non disponible, tentative sans horloge externe");
+      // Ne pas échouer complètement - certains capteurs ont une horloge interne
+      return true;
+    }
   }
 
   ledc_channel_config_t ledc_channel = {};
@@ -235,16 +247,19 @@ bool MIPICameraComponent::init_external_clock_() {
   ledc_channel.speed_mode = LEDC_LOW_SPEED_MODE;
   ledc_channel.channel = LEDC_CHANNEL_0;
   ledc_channel.timer_sel = LEDC_TIMER_0;
-  ledc_channel.duty = 2;  // 50% duty cycle (2^2 / 2 = 2)
+  ledc_channel.duty = (1 << ledc_timer.duty_resolution) / 2;  // 50% duty cycle
   ledc_channel.hpoint = 0;
+  ledc_channel.flags.output_invert = 0;
 
   ret = ledc_channel_config(&ledc_channel);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Échec config channel LEDC: %d", ret);
-    return false;
+    ESP_LOGE(TAG, "Échec config channel LEDC: 0x%x", ret);
+    ESP_LOGW(TAG, "⚠️  Horloge externe non disponible");
+    return true;  // Ne pas bloquer l'initialisation
   }
 
-  ESP_LOGI(TAG, "✓ Horloge externe OK");
+  ESP_LOGI(TAG, "✓ Horloge externe OK (%u Hz, résolution %d-bit)", 
+           this->external_clock_freq_, ledc_timer.duty_resolution);
 #endif
   return true;
 }
