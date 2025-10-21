@@ -211,7 +211,43 @@ bool MIPICameraComponent::init_sensor_() {
 
   return true;
 }
+bool MIPICameraComponent::init_external_clock_() {
+#ifdef USE_ESP32_VARIANT_ESP32P4
+  ESP_LOGI(TAG, "Init horloge externe (pin %d, %u Hz)", 
+           this->external_clock_pin_, this->external_clock_freq_);
 
+  // Configuration LEDC pour générer l'horloge
+  ledc_timer_config_t ledc_timer = {};
+  ledc_timer.speed_mode = LEDC_LOW_SPEED_MODE;
+  ledc_timer.duty_resolution = LEDC_TIMER_2_BIT;
+  ledc_timer.timer_num = LEDC_TIMER_0;
+  ledc_timer.freq_hz = this->external_clock_freq_;
+  ledc_timer.clk_cfg = LEDC_AUTO_CLK;
+
+  esp_err_t ret = ledc_timer_config(&ledc_timer);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Échec config timer LEDC: %d", ret);
+    return false;
+  }
+
+  ledc_channel_config_t ledc_channel = {};
+  ledc_channel.gpio_num = this->external_clock_pin_;
+  ledc_channel.speed_mode = LEDC_LOW_SPEED_MODE;
+  ledc_channel.channel = LEDC_CHANNEL_0;
+  ledc_channel.timer_sel = LEDC_TIMER_0;
+  ledc_channel.duty = 2;  // 50% duty cycle (2^2 / 2 = 2)
+  ledc_channel.hpoint = 0;
+
+  ret = ledc_channel_config(&ledc_channel);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Échec config channel LEDC: %d", ret);
+    return false;
+  }
+
+  ESP_LOGI(TAG, "✓ Horloge externe OK");
+#endif
+  return true;
+}
 bool MIPICameraComponent::init_ldo_() {
 #ifdef USE_ESP32_VARIANT_ESP32P4
   ESP_LOGI(TAG, "Init LDO MIPI");
