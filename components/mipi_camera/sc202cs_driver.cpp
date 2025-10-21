@@ -18,9 +18,9 @@ const SensorInfo SC202CSDriver::INFO = {
   .i2c_address = 0x36,
   .lane_count = 1,
   .bayer_pattern = 1,  // BGGR
-  .lane_bitrate_mbps = 576,
-  .width = 1280,
-  .height = 720,
+  .lane_bitrate_mbps = 384,  // Réduit pour VGA
+  .width = 640,              // ← VGA
+  .height = 480,             // ← VGA
   .fps = 30,
   .default_exposure = 0x0800,
   .min_exposure = 0x0200,
@@ -49,23 +49,23 @@ const SC202CSDriver::InitRegister SC202CSDriver::INIT_SEQUENCE[] = {
   {0x3031, 0x08, 0},
   {0x3037, 0x00, 0},
   
-  // Fenêtre active (720p)
-  {0x3200, 0x00, 0},
-  {0x3201, 0xa0, 0},
-  {0x3202, 0x00, 0},
-  {0x3203, 0xf0, 0},
-  {0x3204, 0x05, 0},
-  {0x3205, 0xa7, 0},
-  {0x3206, 0x03, 0},
-  {0x3207, 0xc7, 0},
-  {0x3208, 0x05, 0},
-  {0x3209, 0x00, 0},
-  {0x320a, 0x02, 0},
-  {0x320b, 0xd0, 0},
-  {0x3210, 0x00, 0},
-  {0x3211, 0x04, 0},
-  {0x3212, 0x00, 0},
-  {0x3213, 0x04, 0},
+  // Fenêtre active VGA (640x480)
+  {0x3200, 0x00, 0},  // x_start high
+  {0x3201, 0x00, 0},  // x_start low = 0
+  {0x3202, 0x00, 0},  // y_start high
+  {0x3203, 0x00, 0},  // y_start low = 0
+  {0x3204, 0x02, 0},  // x_end high
+  {0x3205, 0x8f, 0},  // x_end low = 655 (656 pixels + offset)
+  {0x3206, 0x01, 0},  // y_end high
+  {0x3207, 0xef, 0},  // y_end low = 495 (496 pixels + offset)
+  {0x3208, 0x02, 0},  // output_width high
+  {0x3209, 0x80, 0},  // output_width low = 640
+  {0x320a, 0x01, 0},  // output_height high
+  {0x320b, 0xe0, 0},  // output_height low = 480
+  {0x3210, 0x00, 0},  // x_offset
+  {0x3211, 0x08, 0},
+  {0x3212, 0x00, 0},  // y_offset
+  {0x3213, 0x08, 0},
   
   // Configuration ISP et autres réglages
   {0x3301, 0xff, 0},
@@ -166,7 +166,7 @@ const SC202CSDriver::InitRegister SC202CSDriver::INIT_SEQUENCE[] = {
   {0x393e, 0xc0, 0},
   {0x39dd, 0x41, 0},
   
-  // Exposition et gain par défaut (seront écrasés ensuite)
+  // Exposition et gain par défaut
   {Registers::EXPOSURE_H, 0x00, 0},
   {Registers::EXPOSURE_M, 0x08, 0},
   {Registers::EXPOSURE_L, 0x00, 0},
