@@ -453,23 +453,32 @@ bool MIPICameraComponent::capture_frame() {
     return false;
   }
 
-  // Swap atomique
+  // Swap atomique - récupérer le buffer prêt
   uint8_t ready_idx = this->ready_buffer_index_.load(std::memory_order_acquire);
   this->display_buffer_ = this->frame_buffers_[ready_idx];
   this->display_buffer_ready_.store(false, std::memory_order_release);
 
-  // Appliquer WB software si CCM matérielle non disponible
-  if (!this->color_correction_.is_hardware_ccm_enabled() && this->sensor_driver_) {
+  // ✅ Le mirror est déjà fait par le capteur, pas besoin de PPA
+  // Appliquer seulement le WB software si nécessaire
+  
+  if (this->sensor_driver_) {
     uint32_t frame_num = this->frame_number_.load();
     
-    // Appliquer seulement toutes les N frames
     if (frame_num % white_balance::APPLY_EVERY_N_FRAMES == 0) {
       const auto& info = this->sensor_driver_->get_info();
+      
+      if (debug::LOG_WB_APPLICATION && frame_num % 100 == 0) {
+        ESP_LOGD(TAG, "WB gains: R=%.2f G=%.2f B=%.2f",
+                 white_balance::RED_GAIN,
+                 white_balance::GREEN_GAIN,
+                 white_balance::BLUE_GAIN);
+      }
+      
       this->color_correction_.apply_software_wb_center(
         this->display_buffer_,
         info.width,
         info.height,
-        0.6f  // 60% centre
+        0.6f
       );
     }
   }
