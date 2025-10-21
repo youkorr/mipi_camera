@@ -72,7 +72,7 @@ namespace white_balance {
   
   // 🎯 Option 1: RÉDUIRE LE VERT (recommandé)
   constexpr float RED_GAIN = 1.3f;     // Augmenter rouge
-  constexpr float GREEN_GAIN = 0.7f;   // RÉDUIRE vert (était 1.0)
+  constexpr float GREEN_GAIN = 1.0f;   // RÉDUIRE vert (était 1.0)
   constexpr float BLUE_GAIN = 1.4f;    // Augmenter bleu
   
   // 🎯 Option 2: Si Option 1 trop rose/magenta
