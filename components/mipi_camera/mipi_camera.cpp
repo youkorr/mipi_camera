@@ -178,47 +178,34 @@ bool MIPICameraComponent::init_sensor_() {
   this->current_exposure_ = info.default_exposure;
   this->current_gain_index_ = info.default_gain_index;
 
+  // ✅ Appliquer mirror/flip dans le capteur (plus simple que PPA)
+  if (this->sensor_driver_->supports_flip_mirror()) {
+    if (this->mirror_enabled_) {
+      ESP_LOGI(TAG, "Activation mirror horizontal (capteur)...");
+      ret = this->sensor_driver_->set_mirror(true);
+      if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "✓ Mirror activé");
+      } else {
+        ESP_LOGW(TAG, "⚠️  Échec mirror: 0x%x", ret);
+      }
+      delay(50);
+    }
+    
+    if (this->flip_enabled_) {
+      ESP_LOGI(TAG, "Activation flip vertical (capteur)...");
+      ret = this->sensor_driver_->set_flip(true);
+      if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "✓ Flip activé");
+      } else {
+        ESP_LOGW(TAG, "⚠️  Échec flip: 0x%x", ret);
+      }
+      delay(50);
+    }
+  }
+
   delay(200);  // Stabilisation
   ESP_LOGI(TAG, "✓ Sensor initialisé et stable");
 
-  return true;
-}
-
-bool MIPICameraComponent::init_external_clock_() {
-#ifdef USE_ESP32_VARIANT_ESP32P4
-  ESP_LOGI(TAG, "Init horloge externe GPIO%d @ %u Hz", 
-           this->external_clock_pin_, this->external_clock_freq_);
-
-  ledc_timer_config_t ledc_timer = {};
-  ledc_timer.speed_mode = LEDC_LOW_SPEED_MODE;
-  ledc_timer.duty_resolution = LEDC_TIMER_1_BIT;
-  ledc_timer.timer_num = LEDC_TIMER_0;
-  ledc_timer.freq_hz = this->external_clock_freq_;
-  ledc_timer.clk_cfg = LEDC_AUTO_CLK;
-
-  esp_err_t ret = ledc_timer_config(&ledc_timer);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Échec config LEDC timer");
-    return false;
-  }
-
-  ledc_channel_config_t ledc_channel = {};
-  ledc_channel.gpio_num = this->external_clock_pin_;
-  ledc_channel.speed_mode = LEDC_LOW_SPEED_MODE;
-  ledc_channel.channel = LEDC_CHANNEL_0;
-  ledc_channel.intr_type = LEDC_INTR_DISABLE;
-  ledc_channel.timer_sel = LEDC_TIMER_0;
-  ledc_channel.duty = 1;
-  ledc_channel.hpoint = 0;
-
-  ret = ledc_channel_config(&ledc_channel);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Échec config LEDC channel");
-    return false;
-  }
-
-  ESP_LOGI(TAG, "✓ Horloge externe OK");
-#endif
   return true;
 }
 
